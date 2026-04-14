@@ -68,6 +68,7 @@ jobs:
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
+        if: success() || failure() # Try to release even if build had minor issues
         with:
           tag_name: v${{ steps.get_version.outputs.VERSION }}
           name: r2modman Steamless v${{ steps.get_version.outputs.VERSION }}
@@ -76,3 +77,9 @@ jobs:
             dist/electron/Packaged/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Upload Build Artifacts (Fallback)
+        uses: actions/upload-artifact@v4
+        with:
+          name: r2modman-steamless-builds
+          path: dist/electron/Packaged/*.exe
