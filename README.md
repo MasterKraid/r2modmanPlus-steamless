@@ -6,7 +6,11 @@
 > - [Thunderstore](https://thunderstore.io/package/ebkr/r2modman/)
 > - [GitHub](https://github.com/ebkr/r2modmanPlus/releases/latest)
 
-# r2modman
+# r2modman Steamless
+
+This is a platform-agnostic, store-independent fork of the original [r2modmanPlus](https://github.com/ebkr/r2modmanPlus) by ebkr. 
+
+**Maintained by**: Kraid
 
 [![Discord](https://img.shields.io/discord/727304496522461185?label=r2modman%20Discord&style=for-the-badge)](https://discord.gg/jE2zWHY)
 
@@ -18,7 +22,8 @@
 ## Features
 - Support for Risk of Rain 2, Dyson Sphere Program, Valheim, GTFO, BONEWORKS, and more
 - A clean user interface designed to make modding as simple as possible
-- Safer mod installation allowing you to play the game through Steam normally
+- **Store-independent**: Run games directly from any source (Steam, GOG, Epic, or DRM-free)
+- Safer mod installation allowing you to play the game through Steam normally (optional)
 - Mod profiles to switch between different sets of mods quickly and easily
 - Export profiles to easily share both your mods and configs with friends
 - Download and install mods directly from the manager

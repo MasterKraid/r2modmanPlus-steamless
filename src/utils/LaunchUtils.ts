@@ -14,18 +14,24 @@ import PathResolver from "../r2mm/manager/PathResolver";
 import appWindow from '../providers/node/app/app_window';
 import InteractionProvider from "../providers/ror2/system/InteractionProvider";
 import { TypedEventEmitter } from "./TypedEventEmitter";
+import DirectGameRunner from '../r2mm/launching/runners/multiplatform/DirectGameRunner';
 
 export enum LaunchMode { VANILLA, MODDED };
 
 export const OnGameLaunch = new TypedEventEmitter<{ game: Game, profile: Profile, mode: LaunchMode }>();
 
-export const launch = async (game: Game, profile: Profile, mode: LaunchMode): Promise<void> => {
+export const launch = async (game: Game, profile: Profile, mode: LaunchMode, forceSteamless: boolean = false): Promise<void> => {
     // This event is used for analytics by TMM
     await OnGameLaunch.emit({game, profile, mode});
 
+    let runner = GameRunnerProvider.instance;
+    if (forceSteamless) {
+        runner = new DirectGameRunner();
+    }
+
     const error = (mode === LaunchMode.MODDED)
-        ? await GameRunnerProvider.instance.startModded(game, profile)
-        : await GameRunnerProvider.instance.startVanilla(game, profile);
+        ? await runner.startModded(game, profile)
+        : await runner.startVanilla(game, profile);
 
     if (error instanceof R2Error) {
         throw error;

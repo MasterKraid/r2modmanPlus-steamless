@@ -24,15 +24,30 @@
                                     <li v-if="selectedMode === LaunchMode.VANILLA">
                                         <a v-close-popper @click="selectedMode = LaunchMode.MODDED">
                                             <i class="fas fa-play fa-fw" />
-                                            Start modded
+                                            Select modded mode
                                         </a>
                                     </li>
                                     <li v-else>
                                         <a v-close-popper @click="selectedMode = LaunchMode.VANILLA">
                                             <i class="fas fa-play fa-fw" />
-                                            Start vanilla
+                                            Select vanilla mode
                                         </a>
                                     </li>
+                                    <template v-if="isStoreEnabled">
+                                        <hr class="margin-y--half-width" />
+                                        <li>
+                                            <a v-close-popper @click="launchGame(LaunchMode.MODDED, true)">
+                                                <i class="fas fa-play fa-fw" />
+                                                Start modded (Steamless)
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a v-close-popper @click="launchGame(LaunchMode.VANILLA, true)">
+                                                <i class="fas fa-play fa-fw" />
+                                                Start vanilla (Steamless)
+                                            </a>
+                                        </li>
+                                    </template>
                                 </ul>
                             </template>
                         </ActivityDropdown>
@@ -110,6 +125,8 @@ import { State } from '../../store';
 import VueRouter, { useRouter } from 'vue-router';
 import ProtocolProvider from '../../providers/generic/protocol/ProtocolProvider';
 import ActivityDropdown from '../v2/ActivityDropdown.vue';
+import ManagerSettings from '../../r2mm/manager/ManagerSettings';
+import { Platform } from '../../model/schema/ThunderstoreSchema';
 
 const store = getStore<State>();
 const router = useRouter();
@@ -126,12 +143,18 @@ const thunderstoreModCount = computed(() =>
         : store.getters['tsMods/undeprecatedModCount']
 );
 
+const isStoreEnabled = computed(() => {
+    const isStoreGame = [Platform.STEAM, Platform.EPIC_GAMES_STORE].includes(activeGame.value.activePlatform.storePlatform);
+    const isIgnoreStore = store.getters['settings'].getIgnoreStore();
+    return isStoreGame && !isIgnoreStore;
+});
+
 function getTagLinkClasses(routeNames: string[]) {
     const base = ["tag", "tagged-link__tag"];
     return router && router.currentRoute.value && routeNames.includes(router.currentRoute.value.name as string || "") ? [...base, "is-link"] : [...base, "is-inactive-link"];
 }
 
-async function launchGame(mode: LaunchMode) {
+async function launchGame(mode: LaunchMode, forceSteamless: boolean = false) {
     try {
         await setGameDirIfUnset(activeGame.value);
         await throwIfNoGameDir(activeGame.value);
@@ -140,8 +163,11 @@ async function launchGame(mode: LaunchMode) {
             await linkProfileFiles(activeGame.value, profile.value.asImmutableProfile());
         }
 
-        store.commit("openGameRunningModal");
-        await launch(activeGame.value, profile.value, mode);
+        const settings = await ManagerSettings.getSingleton(activeGame.value);
+        const isSteamless = forceSteamless || settings.getIgnoreStore();
+
+        store.commit("openGameRunningModal", isSteamless);
+        await launch(activeGame.value, profile.value, mode, forceSteamless);
     } catch (error) {
         store.commit("closeGameRunningModal");
         store.commit("error/handleError", R2Error.fromThrownValue(error));

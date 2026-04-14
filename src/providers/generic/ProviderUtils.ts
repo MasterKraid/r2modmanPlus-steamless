@@ -7,24 +7,33 @@ import GameDirectoryResolverProvider from '../ror2/game/GameDirectoryResolverPro
 import GameRunnerProvider from './game/GameRunnerProvider';
 import PlatformInterceptorProvider from './game/platform_interceptor/PlatformInterceptorProvider';
 import ConflictManagementProvider from './installing/ConflictManagementProvider';
+import ManagerSettings from '../../r2mm/manager/ManagerSettings';
+import DirectGameRunner from '../../r2mm/launching/runners/multiplatform/DirectGameRunner';
+import DRMFreeDirectoryResolver from './game/directory_resolver/win/DRMFreeDirectoryResolver';
 
 export default class ProviderUtils {
 
-    public static setupGameProviders(game: Game, platform: Platform) {
-        const runner = PlatformInterceptorProvider.instance.getRunnerForPlatform(platform, game.packageLoader);
+    public static async setupGameProviders(game: Game, platform: Platform) {
+        const settings = await ManagerSettings.getSingleton(game);
+
+        let runner = PlatformInterceptorProvider.instance.getRunnerForPlatform(platform, game.packageLoader);
+        let resolver = PlatformInterceptorProvider.instance.getDirectoryResolverForPlatform(platform);
+
+        if (settings.getIgnoreStore()) {
+            runner = new DirectGameRunner();
+            resolver = new DRMFreeDirectoryResolver();
+        }
 
         if (runner === undefined) {
             throw new R2Error("No suitable runner found", "Runner is likely not yet implemented.", null);
         }
 
-        const resolver = PlatformInterceptorProvider.instance.getDirectoryResolverForPlatform(platform);
-
         if (resolver === undefined) {
             throw new R2Error("No suitable resolver found", "Resolver is likely not yet implemented.", null);
         }
 
-        GameRunnerProvider.provide(() => runner);
-        GameDirectoryResolverProvider.provide(() => resolver);
+        GameRunnerProvider.provide(() => runner!);
+        GameDirectoryResolverProvider.provide(() => resolver!);
         ConflictManagementProvider.provide(() => new ConflictManagementProviderImpl());
     }
 

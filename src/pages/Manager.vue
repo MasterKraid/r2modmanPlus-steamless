@@ -158,6 +158,8 @@ import LaunchTypeModal from "../components/modals/launch-type/LaunchTypeModal.vu
 import appWindow from '../providers/node/app/app_window';
 import GameInstructionParser from "../r2mm/launching/instructions/GameInstructionParser";
 import ManagerActivityBar from '../components/navigation/ManagerActivityBar.vue';
+import ProviderUtils from '../providers/generic/ProviderUtils';
+import { Platform } from '../model/schema/ThunderstoreSchema';
 
 const store = getStore<State>();
 const router = useRouter();
@@ -504,6 +506,10 @@ async function handleSettingsCallbacks(invokedSetting: any) {
             break;
         case "CleanCache":
             CacheUtil.clean();
+            break;
+        case "ToggleIgnoreStore":
+            await settings.value.setIgnoreStore(!settings.value.getIgnoreStore());
+            await ProviderUtils.setupGameProviders(activeGame.value, activeGame.value.activePlatform.storePlatform);
             break;
     }
 }

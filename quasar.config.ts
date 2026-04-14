@@ -217,7 +217,7 @@ export default defineConfig((ctx) => {
             builder: {
                 // https://www.electron.build/configuration/configuration
 
-                appId: isFlatpakTarget ? 'com.github.ebkr.r2modman' : 'ebkr-r2modman',
+                appId: isFlatpakTarget ? 'com.github.ebkr.r2modman-steamless' : 'ebkr-r2modman-steamless',
                 compression: 'store',
 
                 flatpak: {
@@ -277,7 +277,7 @@ export default defineConfig((ctx) => {
                     icon: 'src/assets/icon',
                     maintainer: 'ebkr',
                     vendor: 'ebkr',
-                    synopsis: 'Risk of Rain 2 Mod Manager',
+                    synopsis: 'r2modman Steamless',
                     category: 'Game',
                     mimeTypes: [
                         "x-scheme-handler/ror2mm"

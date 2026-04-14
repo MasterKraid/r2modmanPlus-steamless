@@ -339,6 +339,35 @@ onMounted(async () => {
                 async () => `This will delete all contents of the ${activeGame.value.steamFolderName} folder, and verify the files through Steam`,
                 'fa-wrench',
                 () => emitInvoke('ValidateSteamInstallation')
+            ),
+            new SettingsRow(
+                'Locations',
+                `Launch via Steam`,
+                `Disable this if you want to launch ${activeGame.value.displayName} directly, bypassing Steam.`,
+                async () => {
+                   return settings.value.getIgnoreStore()
+                       ? 'Current: disabled (Manual / Direct launch)'
+                       : 'Current: enabled (via Steam)';
+                },
+                'fa-exchange-alt',
+                () => emitInvoke('ToggleIgnoreStore')
+            )
+        )
+    }
+
+    if (activeGame.value.activePlatform.storePlatform === Platform.EPIC_GAMES_STORE) {
+        settingsList.push(
+            new SettingsRow(
+                'Locations',
+                `Launch via Epic Games Store`,
+                `Disable this if you want to launch ${activeGame.value.displayName} directly, bypassing the Epic Games Store.`,
+                async () => {
+                    return settings.value.getIgnoreStore()
+                        ? 'Current: disabled (Manual / Direct launch)'
+                        : 'Current: enabled (via Epic Games Store)';
+                },
+                'fa-exchange-alt',
+                () => emitInvoke('ToggleIgnoreStore')
             )
         )
     }

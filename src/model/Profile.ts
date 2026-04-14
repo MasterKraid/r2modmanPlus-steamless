@@ -21,7 +21,8 @@ export class ImmutableProfile implements ProfileCompatible {
     public constructor(name: string) {
         this.profileName = name;
         this.rootDir = path.join(PathResolver.MOD_ROOT, 'profiles');
-        ProfileProvider.instance.ensureProfileDirectory(this.rootDir, this.profileName);
+        ProfileProvider.instance.ensureProfileDirectory(this.rootDir, this.profileName)
+            .catch(e => console.error("Failed to ensure profile directory:", e));
     }
 
     public getProfileName(): string {

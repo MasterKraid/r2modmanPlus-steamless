@@ -156,6 +156,15 @@ export default class ManagerSettings {
         await this.save();
     }
 
+    public getIgnoreStore(): boolean {
+        return ManagerSettings.CONTEXT.gameSpecific.ignoreStore || false;
+    }
+
+    public async setIgnoreStore(ignore: boolean) {
+        ManagerSettings.CONTEXT.gameSpecific.ignoreStore = ignore;
+        await this.save();
+    }
+
     public getInstalledDisablePosition() {
         try {
             return Object.entries(SortLocalDisabledMods).filter(value => value[0] === ManagerSettings.CONTEXT.gameSpecific.installedDisablePosition)[0][1];

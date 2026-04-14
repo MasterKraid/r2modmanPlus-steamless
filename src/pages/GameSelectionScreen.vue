@@ -302,7 +302,7 @@ async function proceed() {
     }
 
     try {
-        ProviderUtils.setupGameProviders(selectedGame.value, selectedPlatform.value);
+        await ProviderUtils.setupGameProviders(selectedGame.value, selectedPlatform.value);
     } catch (error) {
         if (error instanceof R2Error) {
             store.commit('error/handleError', error);

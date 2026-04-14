@@ -9,6 +9,7 @@ import GameDirectoryResolverProvider from '../../../../providers/ror2/game/GameD
 import FsProvider from '../../../../providers/generic/file/FsProvider';
 import LoggerProvider, { LogSeverity } from '../../../../providers/ror2/logging/LoggerProvider';
 import ChildProcess from '../../../../providers/node/child_process/child_process';
+import path from '../../../../providers/node/path/path';
 
 export default class DirectGameRunner extends GameRunnerProvider {
 
@@ -40,8 +41,29 @@ export default class DirectGameRunner extends GameRunnerProvider {
 
             gameDir = await FsProvider.instance.realpath(gameDir);
 
-            const gameExecutable = (await FsProvider.instance.readdir(gameDir))
-                .filter((x: string) => game.exeName.includes(x))[0];
+            let gameExecutable = "";
+            for (const exe of game.exeName) {
+                if (await FsProvider.instance.exists(path.join(gameDir, exe))) {
+                    gameExecutable = exe;
+                    break;
+                }
+            }
+
+            if (gameExecutable === "") {
+                // Fallback: search root directory for matches (case-insensitive)
+                const files = await FsProvider.instance.readdir(gameDir);
+                gameExecutable = files.find(file =>
+                    game.exeName.some(exe => exe.toLowerCase() === file.toLowerCase())
+                ) || "";
+            }
+
+            if (gameExecutable === "") {
+                return resolve(new R2Error(
+                    `Unable to find any of the following executables in the game folder: ${game.exeName.join(", ")}`,
+                    "Ensure you have selected the correct game folder in the settings.",
+                    null
+                ));
+            }
 
             const mappedArgs = args.map(value => `"${value}"`).join(' ');
 

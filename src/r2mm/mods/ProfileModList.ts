@@ -45,7 +45,7 @@ export default class ProfileModList {
                 const parsedYaml: any = parseYaml(fileContent) || [];
                 for(let modIndex in parsedYaml){
                     const mod = new ManifestV2().fromJsObject(parsedYaml[modIndex]);
-                    this.setIconPath(mod, profile);
+                    await this.setIconPath(mod, profile);
                     parsedYaml[modIndex] = mod;
                 }
                 return parsedYaml;

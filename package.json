@@ -1,9 +1,9 @@
 {
-  "name": "r2modman",
+  "name": "r2modman-steamless",
   "version": "3.2.15",
   "description": "A simple and easy to use mod manager for many games using Thunderstore.",
-  "productName": "r2modman",
-  "author": "ebkr",
+  "productName": "r2modman Steamless",
+  "author": "Kraid",
   "private": true,
   "license": "MIT",
   "type": "module",

@@ -21,6 +21,7 @@ interface State {
     uninstallModModalMod: ManifestV2 | null;
     isProfileCodeExportModalOpen: boolean;
     isLocalFileImportModalOpen: boolean;
+    isLatestLaunchSteamless: boolean;
 }
 
 export default {
@@ -44,6 +45,7 @@ export default {
         uninstallModModalMod: null,
         isProfileCodeExportModalOpen: false,
         isLocalFileImportModalOpen: false,
+        isLatestLaunchSteamless: false,
     }),
 
     mutations: {
@@ -146,7 +148,8 @@ export default {
             state.isDownloadProgressModalOpen = true;
         },
 
-        openGameRunningModal: function(state: State): void {
+        openGameRunningModal: function(state: State, isSteamless: boolean): void {
+            state.isLatestLaunchSteamless = isSteamless;
             state.isGameRunningModalOpen = true;
         },
 

@@ -13,6 +13,7 @@ type GameRunningModalProps = {
 const props = defineProps<GameRunningModalProps>();
 
 const isSteamGame = computed(() => props.activeGame.activePlatform.storePlatform === Platform.STEAM);
+const isSteamless = computed(() => store.state.modals.isLatestLaunchSteamless);
 const isOpen = computed(() => store.state.modals.isGameRunningModalOpen);
 
 function close() {
@@ -26,10 +27,15 @@ function close() {
         <div class="modal-background" @click="close"></div>
         <div class="modal-content">
             <div class='notification is-info'>
-                <h3 class="title" v-if="isSteamGame">{{ activeGame.displayName }} is launching via Steam</h3>
+                <h3 class="title" v-if="isSteamless">{{ activeGame.displayName }} is starting directly (Steamless)</h3>
+                <h3 class="title" v-else-if="isSteamGame">{{ activeGame.displayName }} is launching via Steam</h3>
                 <h3 class="title" v-else>{{ activeGame.displayName }} is starting</h3>
                 <h5 class="title is-5">Close this message to continue modding.</h5>
-                <div v-if="isSteamGame">
+                <div v-if="isSteamless">
+                    <p>The game is being started directly from its installation folder.</p>
+                    <p>The store (Steam/Epic) is being bypassed.</p>
+                </div>
+                <div v-else-if="isSteamGame">
                     <p>If this is taking a while, it's likely due to Steam starting.</p>
                     <p>Please be patient, and have fun!</p>
                 </div>

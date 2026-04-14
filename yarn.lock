@@ -9702,9 +9702,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"r2modman@workspace:.":
+"r2modman-steamless@workspace:.":
   version: 0.0.0-use.local
-  resolution: "r2modman@workspace:."
+  resolution: "r2modman-steamless@workspace:."
   dependencies:
     "@babel/core": "npm:^7.4.0"
     "@babel/preset-typescript": "npm:^7.14.5"

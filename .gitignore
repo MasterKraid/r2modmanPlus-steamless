@@ -26,3 +26,10 @@ log.txt
 *.njsproj
 *.sln
 /.vs
+
+# Yarn 4
+.yarn/
+! .yarn/releases/
+! .yarn/plugins/
+! .yarn/sdks/
+! .yarn/versions/
