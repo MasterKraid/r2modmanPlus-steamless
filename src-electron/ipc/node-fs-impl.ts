@@ -64,7 +64,7 @@ export function hookFsIpc(browserWindow: BrowserWindow) {
     ipcMain.handle('node:fs:base64FromZip', (event, path) => {
         return fs.promises.readFile(path, {
             encoding: 'base64'
-        }).catch(() => null);
+        });
     });
 
     ipcMain.handle('node:fs:setModifiedTime', (event, path, time) => {

@@ -6,22 +6,20 @@ on:
   workflow_dispatch: # Allow manual trigger
 
 jobs:
-  sync-and-build:
+  sync:
+    name: Sync with Upstream
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.VERSION }}
+      notes: ${{ steps.get_notes.outputs.NOTES }}
     env:
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
-      GITHUB_TOKEN: ${{ secrets.GH_TOKEN }} # Some tools require this exact name
+      GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GH_TOKEN }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
 
       - name: Configure Git
         run: |
@@ -35,22 +33,11 @@ jobs:
 
       - name: Merge Upstream (Auto-Resolve Conflicts)
         run: |
-          # The -X ours strategy tells git: if a conflict occurs on a line, pick OUR version (Steamless).
-          # This ensures our rebranding and Steamless logic won't be overwritten by upstream updates.
-          git merge upstream/develop --no-edit -X ours || (echo "Warning: Major structural changes detected. Manual review recommended but continuing..." && git add . && git commit -m "Auto-resolved structural conflicts")
+          git merge upstream/develop --no-edit -X ours || (echo "Warning: Major structural changes detected." && git add . && git commit -m "Auto-resolved structural conflicts")
 
       - name: Push Merged Changes
         run: |
-          git push origin develop --force # Ensure develop is always up to date with merged code
-
-      - name: Install Dependencies
-        run: |
-          corepack enable
-          yarn install
-
-      - name: Build Windows
-        run: |
-          yarn run build-win
+          git push origin develop --force
 
       - name: Extract Version
         id: get_version
@@ -59,8 +46,6 @@ jobs:
 
       - name: Fetch Upstream Release Notes
         id: get_notes
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           UPSTREAM_NOTES=$(gh release view --repo ebkr/r2modmanPlus --json body --jq '.body')
           STEAMLESS_NOTES="## r2modman Steamless v${{ steps.get_version.outputs.VERSION }}\n\nThis is a platform-agnostic, store-independent fork of the original r2modmanPlus by ebkr.\n\n### Steamless Features:\n- Bypass Steam/Epic/GOG DRM and store launching requirements.\n- Force Steamless launching via the \"Start Modded\" dropdown.\n- Fully rebranded UI and direct-launch awareness.\n\n---\n\n### Original Release Notes (from upstream/ebkr):\n\n$UPSTREAM_NOTES"
@@ -69,20 +54,60 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
         shell: bash
 
+  build:
+    name: Build (${{ matrix.os }})
+    needs: sync
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            build_cmd: yarn run build-win
+          - os: ubuntu-latest
+            build_cmd: yarn run build-linux
+          - os: macos-latest
+            build_cmd: yarn run build-osx
+    env:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Dependencies
+        run: |
+          corepack enable
+          yarn install
+
+      - name: Build Application
+        run: ${{ matrix.build_cmd }}
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: success() || failure() # Try to release even if build had minor issues
         with:
-          tag_name: v${{ steps.get_version.outputs.VERSION }}
-          name: r2modman Steamless v${{ steps.get_version.outputs.VERSION }}
-          body: ${{ steps.get_notes.outputs.NOTES }}
+          tag_name: v${{ needs.sync.outputs.version }}
+          name: r2modman Steamless v${{ needs.sync.outputs.version }}
+          body: ${{ needs.sync.outputs.notes }}
           files: |
             dist/electron/Packaged/*.exe
+            dist/electron/Packaged/*.AppImage
+            dist/electron/Packaged/*.deb
+            dist/electron/Packaged/*.rpm
+            dist/electron/Packaged/*.dmg
+            dist/electron/Packaged/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
       - name: Upload Build Artifacts (Fallback)
         uses: actions/upload-artifact@v4
         with:
-          name: r2modman-steamless-builds
-          path: dist/electron/Packaged/*.exe
+          name: r2modman-steamless-builds-${{ matrix.os }}
+          path: dist/electron/Packaged/*.*
