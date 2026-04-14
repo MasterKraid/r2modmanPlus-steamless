@@ -38,7 +38,7 @@ jobs:
 
       - name: Push Merged Changes
         run: |
-          git push origin main --force # Ensure main is always up to date with merged code
+          git push origin develop --force # Ensure develop is always up to date with merged code
 
       - name: Install Dependencies
         run: |
