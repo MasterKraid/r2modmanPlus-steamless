@@ -1,0 +1,52 @@
+name: Steamless Auto-Sync and Build
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Run daily at midnight
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  sync-and-build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "Kraid (Automation)"
+          git config --global user.email "kraid-auto@users.noreply.github.com"
+
+      - name: Add Upstream Remote
+        run: |
+          git remote add upstream https://github.com/ebkr/r2modmanPlus.git
+          git fetch upstream develop
+
+      - name: Merge Upstream (Auto-Resolve Conflicts)
+        run: |
+          # The -X ours strategy tells git: if a conflict occurs on a line, pick OUR version (Steamless).
+          # This ensures our rebranding and Steamless logic won't be overwritten by upstream updates.
+          git merge upstream/develop --no-edit -X ours || (echo "Warning: Major structural changes detected. Manual review recommended but continuing..." && git add . && git commit -m "Auto-resolved structural conflicts")
+
+      - name: Push Merged Changes
+        run: |
+          git push origin main --force # Ensure main is always up to date with merged code
+
+      - name: Install Dependencies
+        run: |
+          corepack enable
+          yarn install
+
+      - name: Build and Publish
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          yarn run publish-win
