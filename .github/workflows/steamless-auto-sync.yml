@@ -45,8 +45,34 @@ jobs:
           corepack enable
           yarn install
 
-      - name: Build and Publish
+      - name: Build Windows
+        run: |
+          yarn run build-win
+
+      - name: Extract Version
+        id: get_version
+        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Fetch Upstream Release Notes
+        id: get_notes
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          yarn run publish-win
+          UPSTREAM_NOTES=$(gh release view --repo ebkr/r2modmanPlus --json body --jq '.body')
+          STEAMLESS_NOTES="## r2modman Steamless v${{ steps.get_version.outputs.VERSION }}\n\nThis is a platform-agnostic, store-independent fork of the original r2modmanPlus by ebkr.\n\n### Steamless Features:\n- Bypass Steam/Epic/GOG DRM and store launching requirements.\n- Force Steamless launching via the \"Start Modded\" dropdown.\n- Fully rebranded UI and direct-launch awareness.\n\n---\n\n### Original Release Notes (from upstream/ebkr):\n\n$UPSTREAM_NOTES"
+          echo "NOTES<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$STEAMLESS_NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.get_version.outputs.VERSION }}
+          name: r2modman Steamless v${{ steps.get_version.outputs.VERSION }}
+          body: ${{ steps.get_notes.outputs.NOTES }}
+          files: |
+            dist/electron/Packaged/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
