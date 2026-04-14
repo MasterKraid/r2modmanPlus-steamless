@@ -87,6 +87,12 @@ jobs:
           corepack enable
           yarn install
 
+      - name: Install Linux Dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libarchive-tools
+
       - name: Build Application
         run: ${{ matrix.build_cmd }}
 
