@@ -69,7 +69,6 @@ jobs:
           - os: macos-latest
             build_cmd: yarn run build-osx
     env:
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
       GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
     steps:
       - name: Checkout
@@ -96,24 +95,37 @@ jobs:
       - name: Build Application
         run: ${{ matrix.build_cmd }}
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: v${{ needs.sync.outputs.version }}
-          name: r2modman Steamless v${{ needs.sync.outputs.version }}
-          body: ${{ needs.sync.outputs.notes }}
-          files: |
+          name: builds-${{ matrix.os }}
+          path: |
             dist/electron/Packaged/*.exe
             dist/electron/Packaged/*.AppImage
             dist/electron/Packaged/*.deb
             dist/electron/Packaged/*.rpm
             dist/electron/Packaged/*.dmg
             dist/electron/Packaged/*.zip
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub Release
+    needs: [sync, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-builds
+          pattern: builds-*
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.sync.outputs.version }}
+          name: r2modman Steamless v${{ needs.sync.outputs.version }}
+          body: ${{ needs.sync.outputs.notes }}
+          files: all-builds/*
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Upload Build Artifacts (Fallback)
-        uses: actions/upload-artifact@v4
-        with:
-          name: r2modman-steamless-builds-${{ matrix.os }}
-          path: dist/electron/Packaged/*.*
