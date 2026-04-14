@@ -8,6 +8,9 @@ on:
 jobs:
   sync-and-build:
     runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GH_TOKEN }} # Some tools require this exact name
     steps:
       - name: Checkout
         uses: actions/checkout@v4
