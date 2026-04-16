@@ -12,8 +12,9 @@ import ModFileTracker from "../model/installing/ModFileTracker";
 import ConflictManagementProvider from "../providers/generic/installing/ConflictManagementProvider";
 import PathResolver from "../r2mm/manager/PathResolver";
 import ZipProvider from "../providers/generic/zip/ZipProvider";
-import { TrackingMethod } from "../model/schema/ThunderstoreSchema";
+import { EcosystemSchema, TrackingMethod } from "../model/schema/ThunderstoreSchema";
 import ModMode from "../model/enums/ModMode";
+import GameManager from "../model/game/GameManager";
 
 type InstallRuleArgs = {
     profile: ImmutableProfile,
@@ -298,7 +299,7 @@ async function uninstallSubDir(mod: ManifestV2, profile: ImmutableProfile) {
     }
 }
 
-async function uninstallState(mod: ManifestV2, profile: ImmutableProfile) {
+export async function uninstallState(mod: ManifestV2, profile: ImmutableProfile): Promise<void> {
     const stateFilePath = profile.joinToProfilePath("_state", `${mod.getName()}-state.yml`);
     if (await FsProvider.instance.exists(stateFilePath)) {
         const read = await FsProvider.instance.readFile(stateFilePath);
@@ -342,7 +343,7 @@ async function applyModeSubDirs(mod: ManifestV2, profile: ImmutableProfile, mode
 }
 
 // Enables or disables a mod installed with InstallRulePluginInstaller using STATE tracking method.
-async function applyModeState(mod: ManifestV2, profile: ImmutableProfile, mode: number): Promise<void> {
+export async function applyModeState(mod: ManifestV2, profile: ImmutableProfile, mode: number): Promise<void> {
     const modStateFilePath = profile.joinToProfilePath("_state", `${mod.getName()}-state.yml`);
     if (await FsProvider.instance.exists(modStateFilePath)) {
         const fileContents = (await FsProvider.instance.readFile(modStateFilePath)).toString();
@@ -362,10 +363,38 @@ async function applyModeState(mod: ManifestV2, profile: ImmutableProfile, mode: 
 }
 
 export class InstallRulePluginInstaller implements PackageInstaller {
-    public readonly rule: CoreRuleType;
+    private ruleOverride: CoreRuleType|undefined;
 
-    constructor(rules: CoreRuleType) {
-        this.rule = rules;
+    /**
+     * @param ruleOverride can be used to ignore installation rules provided by
+     *                     Thunderstore ecosystem.
+     *
+     * This can be used e.g. in PackageInstaller implementations or test cases.
+     * Note that the override last the instance's whole lifetime, causing it to
+     * ignore changes in the active game. Therefore it shouldn't be used in the
+     * shared instance initiated in registry.ts.
+     */
+    constructor(ruleOverride?: CoreRuleType) {
+        this.ruleOverride = ruleOverride;
+    }
+
+    private get rule(): CoreRuleType {
+        if (this.ruleOverride !== undefined) {
+            return this.ruleOverride;
+        }
+
+        // While it's not ideal that this same method is called repeatedly,
+        // the code path below currently takes <1ms to execute so we should be fine.
+        const gameConfig = EcosystemSchema.getGameConfigBySettingsIdentifier(GameManager.activeGame.settingsIdentifier);
+        if (gameConfig === undefined) {
+            throw new Error(`Game config not found for ${GameManager.activeGame.settingsIdentifier}`);
+        }
+
+        return {
+            gameName: gameConfig.internalFolderName,
+            rules: gameConfig.installRules,
+            relativeFileExclusions: gameConfig.relativeFileExclusions
+        };
     }
 
     /**
