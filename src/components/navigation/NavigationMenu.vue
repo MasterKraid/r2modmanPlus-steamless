@@ -73,7 +73,7 @@
                                 <router-link :to="{name: 'downloads'}" class="margin-right--half-width">
                                     <i class="tag fas fa-download is-primary" />
                                 </router-link>
-                                <span :class="getTagLinkClasses(['manager.online', 'downloads'])">{{thunderstoreModCount}}</span>
+                                <span :class="getTagLinkClasses(['manager.online', 'downloads'])">{{filteredModCount}}</span>
                             </router-link>
                         </li>
                     </ul>
@@ -118,18 +118,17 @@ import {
     setGameDirIfUnset,
     throwIfNoGameDir
  } from '../../utils/LaunchUtils';
-import FileUtils from '../../utils/FileUtils';
-import { ref, computed, onMounted, getCurrentInstance } from 'vue';
+import { ref, computed } from 'vue';
 import { getStore } from '../../providers/generic/store/StoreProvider';
 import { State } from '../../store';
-import VueRouter, { useRouter } from 'vue-router';
-import ProtocolProvider from '../../providers/generic/protocol/ProtocolProvider';
+import { useRouter } from 'vue-router';
 import ActivityDropdown from '../v2/ActivityDropdown.vue';
 import ManagerSettings from '../../r2mm/manager/ManagerSettings';
 import { Platform } from '../../model/schema/ThunderstoreSchema';
 
 const store = getStore<State>();
 const router = useRouter();
+const { filteredModCount } = useModFilters();
 
 const selectedMode = ref<LaunchMode>(LaunchMode.MODDED);
 
