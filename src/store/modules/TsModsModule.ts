@@ -1,3 +1,4 @@
+import { markRaw } from 'vue';
 import { ActionTree, GetterTree, MutationTree } from 'vuex';
 
 import { State as RootState } from '../index';
@@ -34,7 +35,6 @@ type ProgressCallback = (progress: number) => void;
 type PackageListChunk = {full_name: string}[];
 export type PackageListIndex = {
     content: string[],
-    dateFetched: Date,
     hash: string,
     isLatest: boolean
 };
@@ -156,7 +156,10 @@ export const TsModsModule = {
             state.activeGameCacheStatus = status;
         },
         setMods(state, payload: ThunderstoreMod[]) {
-            state.mods = payload;
+            // The mod list is large and immutable, replaced wholesale.
+            // markRaw keeps Vue from deep-proxying every entry, which absolutely dominates
+            // the load memory and time complexity.
+            state.mods = markRaw(payload);
         },
         setModsLastUpdated(state, payload: Date|undefined) {
             state.modsLastUpdated = payload;
@@ -220,7 +223,7 @@ export const TsModsModule = {
                 if (packageListIndex.isLatest) {
                     await dispatch('cacheIndexHash', packageListIndex.hash);
                 } else {
-                    const areAllChunksProcessedSuccessfully = await dispatch(
+                    await dispatch(
                         'fetchAndCachePackageListChunks',
                         {
                             packageListIndex,
@@ -230,11 +233,6 @@ export const TsModsModule = {
                             ),
                         },
                     );
-
-                    if (areAllChunksProcessedSuccessfully) {
-                        commit('setThunderstoreModListUpdateStatus', 'Pruning removed mods from local cache...');
-                        await dispatch('pruneRemovedModsFromCache', packageListIndex.dateFetched);
-                    }
                 }
 
                 // If the package list was up to date and the mod list is already loaded to
@@ -278,17 +276,19 @@ export const TsModsModule = {
         },
 
         async fetchAndCachePackageListChunks(
-            {commit, dispatch},
+            {commit, dispatch, rootState},
             {packageListIndex, progressCallback}: {packageListIndex: PackageListIndex, progressCallback?: ProgressCallback},
         ): Promise<boolean> {
             const chunkCount = packageListIndex.content.length;
             let completed = 0;
             let successes = 0;
+            const fetchedFullNames = new Set<string>();
             const updateProgress = () => progressCallback && progressCallback(Math.floor((completed / chunkCount) * 100));
 
             for (const chunkUrl of packageListIndex.content) {
                 try {
-                    await dispatch('fetchAndCachePackageListChunk', chunkUrl);
+                    const fullNames: string[] = await dispatch('fetchAndCachePackageListChunk', chunkUrl);
+                    fullNames.forEach((name) => fetchedFullNames.add(name));
                     successes++;
                 } catch (e) {
                     console.error('Processing package list chunk failed.', e);
@@ -298,11 +298,11 @@ export const TsModsModule = {
                 }
             }
 
-            // Only store the index hash if all chunks were processed successfully.
-            // Otherwise user wouldn't be able to attempt a retry until the index
-            // hash is updated in the API.
+            // A partial fetched set would prune still-valid packages, and caching
+            // the hash would block retries until the API updates its index hash.
             if (successes === chunkCount) {
                 await dispatch('cacheIndexHash', packageListIndex.hash);
+                await PackageDb.pruneRemovedMods(rootState.activeGame.internalFolderName, fetchedFullNames);
             } else {
                 commit('setThunderstoreModListUpdateError',
                     new R2Error(
@@ -315,7 +315,7 @@ export const TsModsModule = {
             return successes === chunkCount;
         },
 
-        async fetchAndCachePackageListChunk({rootState, state}, chunkUrl: string): Promise<void> {
+        async fetchAndCachePackageListChunk({rootState, state}, chunkUrl: string): Promise<string[]> {
             const url = CdnProvider.replaceCdnHost(chunkUrl);
             const options = {throwLastErrorAsIs: true};
             const {content: chunk} = await retry(() => fetchAndProcessBlobFile(url), options);
@@ -327,6 +327,7 @@ export const TsModsModule = {
             const filtered = chunk.filter((pkg) => !state.exclusions.includes(pkg.full_name));
             const community = rootState.activeGame.internalFolderName;
             await PackageDb.upsertPackageListChunk(community, filtered);
+            return filtered.map((pkg) => pkg.full_name);
         },
 
         async gameHasCachedModList({rootState}): Promise<boolean> {
@@ -360,11 +361,6 @@ export const TsModsModule = {
             }
 
             return state.activeGameCacheStatus || 'Unknown status';
-        },
-
-        async pruneRemovedModsFromCache({rootState}, cutoff: Date) {
-            const community = rootState.activeGame.internalFolderName;
-            await PackageDb.pruneRemovedMods(community, cutoff);
         },
 
         async resetActiveGameCache({commit, rootState, state}) {
