@@ -1,0 +1,41 @@
+name: Test
+
+on: [push]
+
+jobs:
+    build:
+        name: Test on ${{ matrix.platform }}
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - kind: linux
+                      os: ubuntu-latest
+                      platform: linux
+                    - kind: windows
+                      os: windows-latest
+                      platform: win
+                    # Macos-11 is deprecated, macos-12 would require package updates, see PR #1409
+                    # - kind: mac
+                    #   os: macos-11
+                    #   platform: osx
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: jdx/mise-action@v3
+              with:
+                install: true
+                cache: true
+                log_level: debug
+
+            - name: Install pnpm dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Prepare Quasar files
+              run: npx @quasar/cli prepare
+
+            - name: Run tests
+              run: >
+                  node test/folder-structure-testing/populator.mjs &&
+                  pnpm run test
