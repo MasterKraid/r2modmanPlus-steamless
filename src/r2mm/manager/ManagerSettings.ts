@@ -241,8 +241,4 @@ export default class ManagerSettings {
         ManagerSettings.CONTEXT.global.previewPanelWidth = width;
         await this.save();
     }
-
-    public logActiveGameInDexieStore() {
-        console.debug(`Active game in Dexie store: "${ManagerSettings.DEXIE_STORE.activeGame.settingsIdentifier}".`);
-    }
 }
