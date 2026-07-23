@@ -18,9 +18,9 @@ interface IndexChunkHash {
 }
 
 class PackageDexieStore extends Dexie {
-    packages!: Table<DexiePackage, string>;
+    packages!: Table<DexiePackage, [string, string]>;
     indexHashes!: Table<IndexChunkHash, string>;
-    summaries!: Table<DexieSummary, string>;
+    summaries!: Table<DexieSummary, [string, string]>;
 
     constructor() {
         super('tsPackages');
@@ -93,6 +93,12 @@ export async function getPackagesByNames(community: string, packageNames: string
 export async function getPackageVersionNumbers(community: string, packageName: string) {
     const pkg = await getPackageFromDatabase(community, packageName);
     return pkg.versions.map((v) => v.version_number);
+}
+
+export async function getPackageVersionNumbersBatch(community: string, packageNames: string[]): Promise<Map<string, string[]>> {
+    const keys = packageNames.map((p): [string, string] => [community, p]);
+    const packages = await db.packages.where('[community+full_name]').anyOf(keys).toArray();
+    return new Map(packages.map(pkg => [pkg.full_name, pkg.versions.map(v => v.version_number)]));
 }
 
 export async function getPackageCount(community: string) {

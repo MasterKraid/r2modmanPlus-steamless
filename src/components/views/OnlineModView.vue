@@ -77,7 +77,7 @@
         </div>
         <div id="mod-preview">
             <template v-if="previewMod !== null">
-                <OnlinePreviewPanel :mod="previewMod" @close="() => previewMod = null"/>
+                <OnlinePreviewPanel :mod="(previewMod as ThunderstoreMod)" @close="() => previewMod = null"/>
             </template>
         </div>
     </div>
@@ -164,7 +164,6 @@ function toggleModPreview(mod: ThunderstoreMod) {
     #view-content {
         flex-grow: 1;
         overflow-y: auto;
-        padding-right: 1rem;
         height: 100%;
     }
 }

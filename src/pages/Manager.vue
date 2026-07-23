@@ -1,150 +1,36 @@
 <template>
     <ManagerActivityBar />
 	<div class="manager-main-view">
-		<div id='steamIncorrectDir' :class="['modal', {'is-active':(showSteamIncorrectDirectoryModal !== false)}]">
-			<div class="modal-background" @click="showSteamIncorrectDirectoryModal = false"></div>
-			<div class='modal-content'>
-				<div class='notification is-danger'>
-					<h3 class='title'>Failed to set the Steam folder</h3>
-					<p>The steam executable was not selected.</p>
-					<p>If this error has appeared but the executable is correct, please run as administrator.</p>
-				</div>
-			</div>
-			<button class="modal-close is-large" aria-label="close"
-			        @click="showSteamIncorrectDirectoryModal = false"></button>
-		</div>
-		<div id='ror2IncorrectDir' :class="['modal', {'is-active':(showRor2IncorrectDirectoryModal !== false)}]">
-			<div class="modal-background" @click="showRor2IncorrectDirectoryModal = false"></div>
-			<div class='modal-content'>
-				<div class='notification is-danger'>
-					<h3 class='title'>Failed to set the {{ activeGame.displayName }} folder</h3>
-					<p>The executable must be either of the following: "{{ activeGame.exeName.join('", "') }}".</p>
-					<p>If this error has appeared but the executable is correct, please run as administrator.</p>
-				</div>
-			</div>
-			<button class="modal-close is-large" aria-label="close"
-			        @click="showRor2IncorrectDirectoryModal = false"></button>
-		</div>
-		<ModalCard id="steam-installation-validation-modal" :is-active="isValidatingSteamInstallation" @close-modal="closeSteamInstallationValidationModal" :can-close="true">
-			<template v-slot:header>
-				<h2 class='modal-title'>Clearing the {{activeGame.displayName}} installation directory</h2>
-			</template>
-			<template v-slot:body>
-				<div class='notification is-warning'>
-					<p>
-						You will not not be able to launch the game until
-						Steam has verified the integrity of the game files.
-					</p>
-				</div>
-				<p>
-					Steam will be started and will attempt to verify the
-					integrity of {{ activeGame.displayName }}.
-				</p>
-				<br/>
-				<p>
-					Please check the Steam window for validation progress.
-					If the window has not yet appeared, please be patient.
-				</p>
-			</template>
-			<template v-slot:footer>
-				<button class="button is-info" @click="closeSteamInstallationValidationModal()">
-					I understand
-				</button>
-			</template>
-		</ModalCard>
-        <ModalCard id="dependency-strings-modal" :is-active="showDependencyStrings" @close-modal="showDependencyStrings = false;" :can-close="true">
-            <template v-slot:header>
-                <h2 class='modal-title'>Dependency string list</h2>
-            </template>
-            <template v-slot:body>
-                <ul>
-                    <li v-for="(key, index) in localModList" :key="`dep-str-${index}`">
-                        {{key.getName()}}-{{key.getVersionNumber().toString()}}
-                    </li>
-                </ul>
-            </template>
-            <template v-slot:footer>
-                <button class="button is-info"
-                        @click="showDependencyStrings = false;">
-                    Close
-                </button>
-            </template>
-        </ModalCard>
-		<ModalCard id="launch-parameters-modal" :is-active="showLaunchParameterModal" @close-modal="() => {showLaunchParameterModal = false;}" :can-close="true">
-			<template v-slot:header>
-				<h2 class='modal-title'>Set custom launch parameters</h2>
-			</template>
-			<template v-slot:body>
-				<p>Some arguments are provided by default:</p>
-				<br/>
-				<p>Modded:
-					<br/>
-					<code v-if="doorstopTarget.length > 0">
-						{{ doorstopTarget }}
-					</code>
-                    <code v-else>These parameters will be available after installing a mod loader.</code>
-				</p>
-				<br/>
-				<p>Vanilla:
-					<br>
-					<code>
-						{{ vanillaLaunchArgs }}
-					</code>
-				</p>
-				<br/>
-				<p>
-					<strong>Please note that these are called against the Steam executable. Be careful when
-						entering custom launch parameters.</strong>
-				</p>
-				<br/>
-				<input
-					v-model='launchParametersModel'
-					id='launch-parameters-modal-input'
-					class='input'
-					placeholder='Enter parameters'
-					autocomplete='off'
-				/>
-			</template>
-			<template v-slot:footer>
-				<button class='button is-info' @click='updateLaunchParameters()'>
-					Update launch parameters
-				</button>
-			</template>
-		</ModalCard>
-
         <CategoryFilterModal />
+        <IncorrectGameDirectoryModal />
+        <IncorrectSteamDirectoryModal />
+        <LaunchArgumentsModal />
+        <DependencyStringsModal />
+        <SteamInstallationValidationModal />
         <SortModal />
         <LocalFileImportModal :visible="importingLocalMod" @close-modal="importingLocalMod = false" />
         <ProfileCodeExportModal />
         <DownloadProgressModal />
         <DownloadModVersionSelectModal />
         <UpdateAllInstalledModsModal />
+        <ConcerningPackageReviewModal/>
         <LaunchTypeModal v-if="canRenderLaunchTypeModal()" />
 
         <div class="router-view">
-            <router-view name="subview" v-on:setting-invoked="handleSettingsCallbacks($event)" />
+            <router-view name="subview" />
         </div>
     </div>
 </template>
 
 <script lang='ts' setup>
-import { computed, onMounted, ref } from 'vue';
-import PathResolver from '../r2mm/manager/PathResolver';
-import { SteamInstallationValidator } from '../r2mm/manager/SteamInstallationValidator';
-import R2Error from '../model/errors/R2Error';
-import ThemeManager from '../r2mm/manager/ThemeManager';
-import { DataFolderProvider } from '../providers/ror2/system/DataFolderProvider';
-import InteractionProvider from '../providers/ror2/system/InteractionProvider';
-import os from '../providers/node/os/os';
-import FsProvider from '../providers/generic/file/FsProvider';
-import CacheUtil from '../r2mm/mods/CacheUtil';
-import LinkProvider from '../providers/components/LinkProvider';
-import GameRunnerProvider from '../providers/generic/game/GameRunnerProvider';
+import { ref } from 'vue';
 import LocalFileImportModal from '../components/importing/LocalFileImportModal.vue';
-import { PackageLoader } from '../model/schema/ThunderstoreSchema';
-import GameInstructions from '../r2mm/launching/instructions/GameInstructions';
 import CategoryFilterModal from '../components/modals/CategoryFilterModal.vue';
-import ModalCard from '../components/ModalCard.vue';
+import IncorrectGameDirectoryModal from '../components/modals/IncorrectGameDirectoryModal.vue';
+import IncorrectSteamDirectoryModal from '../components/modals/IncorrectSteamDirectoryModal.vue';
+import DependencyStringsModal from '../components/modals/DependencyStringsModal.vue';
+import SteamInstallationValidationModal from '../components/modals/SteamInstallationValidationModal.vue';
+import LaunchArgumentsModal from '../components/modals/LaunchArgumentsModal.vue';
 import ProfileCodeExportModal from '../components/modals/ProfileCodeExportModal.vue';
 import SortModal from '../components/modals/SortModal.vue';
 import DownloadModVersionSelectModal from '../components/views/DownloadModVersionSelectModal.vue';
@@ -152,32 +38,15 @@ import DownloadProgressModal from '../components/views/DownloadProgressModal.vue
 import UpdateAllInstalledModsModal from '../components/views/UpdateAllInstalledModsModal.vue';
 import { getStore } from '../providers/generic/store/StoreProvider';
 import { State } from '../store';
-import { useRouter } from 'vue-router';
-import path from '../providers/node/path/path';
 import LaunchTypeModal from "../components/modals/launch-type/LaunchTypeModal.vue";
 import appWindow from '../providers/node/app/app_window';
-import GameInstructionParser from "../r2mm/launching/instructions/GameInstructionParser";
 import ManagerActivityBar from '../components/navigation/ManagerActivityBar.vue';
 import ProviderUtils from '../providers/generic/ProviderUtils';
 import { Platform } from '../model/schema/ThunderstoreSchema';
 
 const store = getStore<State>();
-const router = useRouter();
 
-const isValidatingSteamInstallation = ref<boolean>(false);
-const showSteamIncorrectDirectoryModal = ref<boolean>(false);
-const showRor2IncorrectDirectoryModal = ref<boolean>(false);
-const launchParametersModel = ref<string>('');
-const showLaunchParameterModal = ref<boolean>(false);
-const showDependencyStrings = ref<boolean>(false);
 const importingLocalMod = ref<boolean>(false);
-const doorstopTarget = ref<string>("");
-const vanillaLaunchArgs = ref<string>("");
-
-const activeGame = computed(() => store.state.activeGame);
-const settings = computed(() => store.getters['settings']);
-const profile = computed(() => store.getters['profile/activeProfile']);
-const localModList = computed(() => store.state.profile.modList);
 
 function canRenderLaunchTypeModal() {
     return ['linux', 'darwin'].includes(appWindow.getPlatform());
@@ -516,11 +385,6 @@ async function handleSettingsCallbacks(invokedSetting: any) {
 
 store.dispatch('profile/loadOrderingSettings');
 store.commit('modFilters/reset');
-
-onMounted(async () => {
-    launchParametersModel.value = settings.value.getContext().gameSpecific.launchParameters;
-})
-
 </script>
 
 <style lang="scss">
