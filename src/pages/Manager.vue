@@ -23,7 +23,7 @@
 </template>
 
 <script lang='ts' setup>
-import { ref } from 'vue';
+import { onUnmounted, ref } from 'vue';
 import LocalFileImportModal from '../components/importing/LocalFileImportModal.vue';
 import CategoryFilterModal from '../components/modals/CategoryFilterModal.vue';
 import IncorrectGameDirectoryModal from '../components/modals/IncorrectGameDirectoryModal.vue';
@@ -45,6 +45,8 @@ import ProviderUtils from '../providers/generic/ProviderUtils';
 import { Platform } from '../model/schema/ThunderstoreSchema';
 
 const store = getStore<State>();
+
+const { resetFilter } = useModFiltersComposable()
 
 const importingLocalMod = ref<boolean>(false);
 
@@ -385,6 +387,10 @@ async function handleSettingsCallbacks(invokedSetting: any) {
 
 store.dispatch('profile/loadOrderingSettings');
 store.commit('modFilters/reset');
+
+onUnmounted(() => {
+    resetFilter();
+});
 </script>
 
 <style lang="scss">

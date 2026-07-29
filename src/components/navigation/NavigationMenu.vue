@@ -128,7 +128,7 @@ import { Platform } from '../../model/schema/ThunderstoreSchema';
 
 const store = getStore<State>();
 const router = useRouter();
-const { filteredModCount } = useModFilters();
+const { filteredModCount } = useModFiltersComposable();
 
 const selectedMode = ref<LaunchMode>(LaunchMode.MODDED);
 
