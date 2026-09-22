@@ -241,4 +241,13 @@ export default class ManagerSettings {
         ManagerSettings.CONTEXT.global.previewPanelWidth = width;
         await this.save();
     }
+
+    public async getLocale() {
+        return ManagerSettings.CONTEXT.global.locale;
+    }
+
+    public async setLocale(locale: string) {
+        ManagerSettings.CONTEXT.global.locale = locale;
+        await this.save();
+    }
 }

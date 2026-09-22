@@ -8,7 +8,9 @@
                         <button class="launch-split__start" @click="launchGame(selectedMode)">
                             <i class="fas fa-play fa-fw" />
                             <span>
-                                Start {{ selectedMode === LaunchMode.MODDED ? 'modded' : 'vanilla' }}
+                                {{ selectedMode === LaunchMode.MODDED
+                                    ? t('translations.pages.manager.navigation.gameActions.startModded')
+                                    : t('translations.pages.manager.navigation.gameActions.startVanilla') }}
                             </span>
                         </button>
                         <ActivityDropdown trigger="click" placement="bottom-end">
@@ -54,13 +56,13 @@
                     </div>
                 </div>
                 <hr/>
-                <p class="menu-label">Mods</p>
+                <p class="menu-label">{{ t('translations.pages.manager.navigation.modsActions.label') }}</p>
                 <div>
                     <ul class="menu-list">
                         <li>
                             <router-link :to="{name: 'manager.installed'}" class="tagged-link">
                                 <i class="fas fa-folder tagged-link__icon icon--margin-right" />
-                                <span class="tagged-link__content">Installed</span>
+                                <span class="tagged-link__content">{{ t('translations.pages.manager.navigation.modsActions.installed') }}</span>
                                 <span :class="getTagLinkClasses(['manager.installed', 'manager'])">{{localModCount}}</span>
                             </router-link>
                         </li>
@@ -68,7 +70,7 @@
                             <router-link :to="{name: 'manager.online'}"
                                          :class="['tagged-link', {'is-active': router.currentRoute.value.name === 'downloads'}]">
                                 <i class="fas fa-globe tagged-link__icon icon--margin-right" />
-                                <span class="tagged-link__content">Online</span>
+                                <span class="tagged-link__content">{{ t('translations.pages.manager.navigation.modsActions.online') }}</span>
 
                                 <router-link :to="{name: 'downloads'}" class="margin-right--half-width">
                                     <i class="tag fas fa-download is-primary" />
@@ -79,24 +81,24 @@
                     </ul>
                 </div>
                 <hr/>
-                <p class='menu-label'>Other</p>
+                <p class='menu-label'>{{ t('translations.pages.manager.navigation.otherActions.label') }}</p>
                 <ul class='menu-list'>
                     <li>
                         <router-link :to="{name: 'config-editor'}">
                             <i class="fas fa-edit icon--margin-right" />
-                            Config editor
+                            {{ t('translations.pages.manager.navigation.otherActions.configEditor') }}
                         </router-link>
                     </li>
                     <li>
                         <router-link :to="{name: 'manager.settings'}">
                             <i class="fas fa-cog icon--margin-right" />
-                            Settings
+                            {{ t('translations.pages.manager.navigation.otherActions.settings') }}
                         </router-link>
                     </li>
                     <li>
                         <router-link :to="{name: 'help'}">
                             <i class="fas fa-question-circle icon--margin-right" />
-                            Help
+                            {{ t('translations.pages.manager.navigation.otherActions.help') }}
                         </router-link>
                     </li>
                 </ul>
@@ -122,6 +124,7 @@ import { ref, computed } from 'vue';
 import { getStore } from '../../providers/generic/store/StoreProvider';
 import { State } from '../../store';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import ActivityDropdown from '../v2/ActivityDropdown.vue';
 import ManagerSettings from '../../r2mm/manager/ManagerSettings';
 import { Platform } from '../../model/schema/ThunderstoreSchema';
@@ -129,6 +132,7 @@ import { Platform } from '../../model/schema/ThunderstoreSchema';
 const store = getStore<State>();
 const router = useRouter();
 const { filteredModCount } = useModFiltersComposable();
+const { t } = useI18n();
 
 const selectedMode = ref<LaunchMode>(LaunchMode.MODDED);
 

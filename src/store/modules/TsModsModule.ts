@@ -28,6 +28,7 @@ export interface State {
     mods: ThunderstoreMod[];
     modsLastUpdated?: Date | undefined;
     thunderstoreModListUpdateError: Error|undefined;
+    thunderstoreModListUpdateProgress: number|undefined;
     thunderstoreModListUpdateStatus: string;
 }
 
@@ -72,8 +73,10 @@ export const TsModsModule = {
         modsLastUpdated: undefined,
         /*** Error shown on UI after mod list refresh fails */
         thunderstoreModListUpdateError: undefined,
+        /*** Progress percentage of package list chunk fetch */
+        thunderstoreModListUpdateProgress: undefined,
         /*** Status shown on UI during mod list refresh */
-        thunderstoreModListUpdateStatus: ''
+        thunderstoreModListUpdateStatus: '',
     }),
 
     getters: <GetterTree<State, RootState>>{
@@ -143,6 +146,7 @@ export const TsModsModule = {
             state.mods = [];
             state.modsLastUpdated = undefined;
             state.thunderstoreModListUpdateError = undefined;
+            state.thunderstoreModListUpdateProgress = undefined;
             state.thunderstoreModListUpdateStatus = '';
         },
         clearModCache(state) {
@@ -150,6 +154,7 @@ export const TsModsModule = {
         },
         finishThunderstoreModListUpdate(state) {
             state.isThunderstoreModListUpdateInProgress = false;
+            state.thunderstoreModListUpdateProgress = undefined;
             state.thunderstoreModListUpdateStatus = '';
         },
         setActiveGameCacheStatus(state, status: string|undefined) {
@@ -170,6 +175,9 @@ export const TsModsModule = {
         },
         setThunderstoreModListUpdateError(state, error: Error) {
             state.thunderstoreModListUpdateError = error instanceof Error ? error : new Error(error);
+        },
+        setThunderstoreModListUpdateProgress(state, progress: number|undefined) {
+            state.thunderstoreModListUpdateProgress = progress;
         },
         setThunderstoreModListUpdateStatus(state, status: string) {
             state.thunderstoreModListUpdateStatus = status;
@@ -215,7 +223,7 @@ export const TsModsModule = {
             commit('startThunderstoreModListUpdate');
 
             try {
-                commit('setThunderstoreModListUpdateStatus', 'Checking for mod list updates from Thunderstore...');
+                commit('setThunderstoreModListUpdateStatus', 'checkingForUpdates');
                 const packageListIndex = await dispatch('fetchPackageListIndex');
 
                 // If the package list is up to date, only update the timestamp. Otherwise,
@@ -223,14 +231,15 @@ export const TsModsModule = {
                 if (packageListIndex.isLatest) {
                     await dispatch('cacheIndexHash', packageListIndex.hash);
                 } else {
+                    commit('setThunderstoreModListUpdateProgress', 0);
                     await dispatch(
                         'fetchAndCachePackageListChunks',
                         {
                             packageListIndex,
-                            progressCallback: (progress: number) => commit(
-                                'setThunderstoreModListUpdateStatus',
-                                `Loading latest mod list from Thunderstore: ${progress}%`
-                            ),
+                            progressCallback: (progress: number) => {
+                                commit('setThunderstoreModListUpdateProgress', progress);
+                                commit('setThunderstoreModListUpdateStatus', 'loadingLatestModList');
+                            },
                         },
                     );
                 }
@@ -244,9 +253,9 @@ export const TsModsModule = {
                 if (packageListIndex.isLatest && state.mods.length > 0) {
                     await dispatch('updateModsLastUpdated');
                 } else {
-                    commit('setThunderstoreModListUpdateStatus', 'Processing the mod list...');
+                    commit('setThunderstoreModListUpdateStatus', 'processingModList');
                     await dispatch('updateMods');
-                    commit('setThunderstoreModListUpdateStatus', 'Almost done...');
+                    commit('setThunderstoreModListUpdateStatus', 'almostDone');
                     await dispatch('profile/tryLoadModListFromDisk', null, {root: true});
                 }
             } catch (e) {
@@ -344,7 +353,7 @@ export const TsModsModule = {
 
         async getActiveGameCacheStatus({commit, state, rootState}): Promise<string> {
             if (state.isThunderstoreModListUpdateInProgress) {
-                return "Online mod list is currently updating, please wait for the operation to complete";
+                return 'updating';
             }
 
             // Only check the status once, as this is used in the settings
@@ -353,17 +362,17 @@ export const TsModsModule = {
                 let status = '';
                 try {
                     status = (await PackageDb.hasEntries(rootState.activeGame.internalFolderName))
-                        ? `${rootState.activeGame.displayName} has a local copy of online mod list`
-                        : `${rootState.activeGame.displayName} has no local copy stored`;
+                        ? `hasCopy`
+                        : `doesNotHaveCopy`;
                 } catch (e) {
                     console.error(e);
-                    status = 'Error occurred while checking mod list status';
+                    status = 'errorOccurred';
                 }
 
                 commit('setActiveGameCacheStatus', status);
             }
 
-            return state.activeGameCacheStatus || 'Unknown status';
+            return state.activeGameCacheStatus || 'unknown';
         },
 
         async resetActiveGameCache({commit, rootState, state}) {
@@ -375,7 +384,7 @@ export const TsModsModule = {
             const community = rootState.activeGame.internalFolderName;
 
             try {
-                commit('setThunderstoreModListUpdateStatus', 'Resetting mod list cache...');
+                commit('setThunderstoreModListUpdateStatus', 'resettingCache');
                 await PackageDb.resetCommunity(community);
                 commit('setModsLastUpdated', undefined);
             } finally {

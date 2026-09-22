@@ -1,9 +1,12 @@
 <script lang="ts" setup>
+import { useI18n } from 'vue-i18n';
 import Game from "../../model/game/Game";
 import { Platform } from "../../model/schema/ThunderstoreSchema";
 import { computed } from 'vue';
 import { getStore } from '../../providers/generic/store/StoreProvider';
 import { State } from '../../store';
+
+const { t } = useI18n();
 
 const store = getStore<State>()
 
@@ -41,6 +44,6 @@ function close() {
                 </div>
             </div>
         </div>
-        <button class="modal-close is-large" aria-label="close" @click="close"></button>
+        <button class="modal-close is-large" :aria-label="t('translations.modals.gameRunning.close')" @click="close"></button>
     </div>
 </template>
